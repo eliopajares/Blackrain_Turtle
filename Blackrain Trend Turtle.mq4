@@ -27,6 +27,7 @@
 //| INPUT PARAMETERS                                                 |
 //+------------------------------------------------------------------+
 
+//compile test
 
 input int    magic_number  = 12345 ; //change magic number when same EA used in the same account to avoid overlap issues with open orders
 //input string pair          = "EURUSD"; //currency pair
