@@ -45,13 +45,13 @@ input          ENUM_TIMEFRAMES HIGH_TF = PERIOD_D1;
 input int      time_between_trades = -1; //value in seconds of the time between a loss trade and a new one,  -1 for not using this
 
 extern string  data_2 = "==== Management of trade setup ====";
-input bool     pyramidying = false;
-input int      max_pyramid_trades = 3;
+// input bool     pyramidying = false;
+// input int      max_pyramid_trades = 3;
 input bool     management_trade = false; //
 input bool     breakeven     = false;
 input bool     close_trade     = true;
 input bool     trailing      = false; //
-input double   TrailingStop  = 20; //
+input double   TrailingStop  = 20; // TS in pips
 input double   TS_RRratio_step = 2; //TS step in regards RR ratio
 input double   TS_RRratio_sl = 1; //TS stoploss distance in regards RR ratio
 input bool     CloseOnDuration = false;
@@ -63,23 +63,23 @@ input double   PipsStick     = 40;
 input double   PipsRetrace   = 20;
 
 extern string  data_3 = "==== Money management ====";
-input double   Lots         = 0.1;
+input double   Lots         = 0.1; //if MM is false
 input bool     MM           = true;
-input double   Risk         = 0.5;
-input double   RR           = 2;
-input double   maxlots      = 2;
+input double   Risk         = 0.5; //risk percentage
+input double   RR           = 3;
+input double   maxlots      = 2; //max lots allowed, as safety net
 
 extern string  data_4 = "==== Entry & Exit parameters ====";
 input bool     S1             = true;
-input int      Trade_Period_S1= 20;
-input int      Stop_Period_S1 = 10;
-input bool     S2             = true;
-input int      Trade_Period_S2= 55;
-input int      Stop_Period_S2 = 20;
-input bool     Strict         = false;
+input int      Trade_Period_S1= 60;
+input int      Stop_Period_S1 = 20;
+// input bool     S2             = true;
+// input int      Trade_Period_S2= 55;
+// input int      Stop_Period_S2 = 20;
+input bool     Strict         = true;
 
 extern string  data_5 = "==== ATR parameters ====";
-input int      ATR_period     = 20;
+input int      ATR_period     = 20; //ATR_period
 input double   ATR_SL_factor  = 2;
 
 extern string  data_6 = "==== Stochastic parameters ====";
@@ -88,7 +88,7 @@ input int      DPeriod        = 7; // D Period
 input int      Slowing        = 9;  // Slowing value
 //input int      StochUpper     = 70; // Stochastic Upper limit
 //input int      StochLower     = 30; // Stochastic Lower limit
-input int      Stoch_range    = 30;
+input int      Stoch_range    = 20; // Stochastic upper and lower limit range
 
 extern string  data_8 = "==== Days to Trade ====";
 input bool     Sunday         = true;
@@ -121,9 +121,9 @@ input bool     December       = true;
 int Slippage = 3;
 int vSlippage;
 int ticket;
-int ticket_1,ticket_2,ticket_3;
+// int ticket_1,ticket_2,ticket_3;
 int total_orders;
-int count_1,count_2;
+// int count_1,count_2;
 int current_spread;
 int i,ii;
 int RSIUpper,RSILower;
@@ -133,8 +133,8 @@ double LotDigits = 2;
 double trade_lots;
 double vPoint; 
 double turtle_S1_0,turtle_S1_1,turtle_S1_2;
-double turtle_S2_0,turtle_S2_1,turtle_S2_2;
-double turtle_SL_buy,turtle_SL_sell;
+// double turtle_S2_0,turtle_S2_1,turtle_S2_2;
+// double turtle_SL_buy,turtle_SL_sell;
 double ATR_med_0;
 double SL_dist;
 double SL,TP;
@@ -143,7 +143,7 @@ double stochastic_main_med_0,stochastic_main_med_1,stochastic_main_med_2;
 double stochastic_signal_med_0,stochastic_signal_med_1,stochastic_signal_med_2;
 
 bool IsLastOrderWin;
-bool fake_order;
+// bool fake_order;
 
 //+------------------------------------------------------------------+
 //|  INIT FUNCTION                                                   |
@@ -210,21 +210,18 @@ void OnTick()
 //| TO BE DONE                                                       |
 //+------------------------------------------------------------------+
    
-// add filter: skip one trade if previous close trade is positive. At 50%:Found a solution by opening a 0.01 lots order and check if it is a win or a loss, this is just 50% solution
-// add System 2. DONE
-// pyramiding up to X times
 
 //+------------------------------------------------------------------+
 //| BUY / SELL OPERATIONS                                            |
 //+------------------------------------------------------------------+
    
    total_orders=CountOrder_symbol_magic();
-   if(total_orders==0) //initialize and delete old pending orders
-      {
-      closeall_stop();
-      bool pyramid_1 = false;
-      bool pyramid_2 = false;
-      }
+   // if(total_orders==0) //initialize and delete old pending orders
+      // {
+      // closeall_stop();
+      // bool pyramid_1 = false;
+      // bool pyramid_2 = false;
+      // }
    current_spread = MarketInfo(Symbol(),MODE_SPREAD);
    //Print("Hello WORLD");
    if(total_orders<orders && NewBar()==true && DayToTrade()==true && HourToTrade()==true && MonthToTrade()==true && NoFridayEvening()==true && AllowOrders==true && TimeBetweenOrders()==true && current_spread<=spread)
@@ -234,49 +231,52 @@ void OnTick()
       {
       
       //stochastic_main_med_0 = iStochastic(Symbol(), MED_TF, KPeriod, DPeriod, Slowing, MODE_SMA, 0, MODE_MAIN, 0);
-      //stochastic_main_med_1 = iStochastic(Symbol(), MED_TF, KPeriod, DPeriod, Slowing, MODE_SMA, 0, MODE_MAIN, 1);
-      //stochastic_main_med_2 = iStochastic(Symbol(), MED_TF, KPeriod, DPeriod, Slowing, MODE_SMA, 0, MODE_MAIN, 2);
+      stochastic_main_med_1 = iStochastic(Symbol(), MED_TF, KPeriod, DPeriod, Slowing, MODE_SMA, 0, MODE_MAIN, 1);
+      stochastic_main_med_2 = iStochastic(Symbol(), MED_TF, KPeriod, DPeriod, Slowing, MODE_SMA, 0, MODE_MAIN, 2);
       //stochastic_signal_med_0 = iStochastic(Symbol(), MED_TF, KPeriod, DPeriod, Slowing, MODE_SMA, 0, MODE_SIGNAL, 0);
-      //stochastic_signal_med_1 = iStochastic(Symbol(), MED_TF, KPeriod, DPeriod, Slowing, MODE_SMA, 0, MODE_SIGNAL, 1);
-      //stochastic_signal_med_2 = iStochastic(Symbol(), MED_TF, KPeriod, DPeriod, Slowing, MODE_SMA, 0, MODE_SIGNAL, 2);
-      
-      //stochastic_main_med_1_100 = iStochastic(Symbol(), MED_TF, 100, DPeriod, Slowing, MODE_SMA, 0, MODE_MAIN, 1);
-      //stochastic_main_med_2_100 = iStochastic(Symbol(), MED_TF, 100, DPeriod, Slowing, MODE_SMA, 0, MODE_MAIN, 2);
+      stochastic_signal_med_1 = iStochastic(Symbol(), MED_TF, KPeriod, DPeriod, Slowing, MODE_SMA, 0, MODE_SIGNAL, 1);
+      stochastic_signal_med_2 = iStochastic(Symbol(), MED_TF, KPeriod, DPeriod, Slowing, MODE_SMA, 0, MODE_SIGNAL, 2);
       
       ATR_med_0 = iATR(Symbol(),MED_TF,ATR_period,0);
       
-      turtle_S1_0 = iCustom(Symbol(),MED_TF,"TheTurtleTradingChannel",Trade_Period_S1,Stop_Period_S1,Strict,false,6,0);
+      // turtle_S1_0 = iCustom(Symbol(),MED_TF,"TheTurtleTradingChannel",Trade_Period_S1,Stop_Period_S1,Strict,false,6,0);
       turtle_S1_1 = iCustom(Symbol(),MED_TF,"TheTurtleTradingChannel",Trade_Period_S1,Stop_Period_S1,Strict,false,6,1);
-      turtle_S1_2 = iCustom(Symbol(),MED_TF,"TheTurtleTradingChannel",Trade_Period_S1,Stop_Period_S1,Strict,false,6,2);
+      // turtle_S1_2 = iCustom(Symbol(),MED_TF,"TheTurtleTradingChannel",Trade_Period_S1,Stop_Period_S1,Strict,false,6,2);
       
       //turtle_S2_0 = iCustom(Symbol(),MED_TF,"TheTurtleTradingChannel",Trade_Period_S2,Stop_Period_S2,Strict,false,6,0);
       //turtle_S2_1 = iCustom(Symbol(),MED_TF,"TheTurtleTradingChannel",Trade_Period_S2,Stop_Period_S2,Strict,false,6,1);
       //turtle_S2_2 = iCustom(Symbol(),MED_TF,"TheTurtleTradingChannel",Trade_Period_S2,Stop_Period_S2,Strict,false,6,2);
 
-      
+      // Print("Turtle is: ",turtle_S1_1);
+      // Print("Stochastic main 1 is: ",stochastic_main_med_1);
+      // Print("Stochastic main 2 is: ",stochastic_main_med_2);
+      // Print("Stochastic signal 1 is: ",stochastic_signal_med_1);
+      // Print("Stochastic signal 2 is: ",stochastic_signal_med_2);
+      // Print("Stochastic Lower is; ",StochLower);
       //IsLastOrderWin = Last_Order_Profit();
       //--- check for BUY position
       
       if(
-      //(turtle_S1_0==OP_BUY && stochastic_main_med_1>stochastic_signal_med_1 && stochastic_main_med_2<stochastic_signal_med_2 && stochastic_main_med_0<StochLower)
-      (turtle_S1_1==OP_BUY && turtle_S1_2==OP_SELL && S1==true)
+      (turtle_S1_1==OP_BUY && stochastic_main_med_1>stochastic_signal_med_1 && stochastic_main_med_2<stochastic_signal_med_2 && stochastic_main_med_1<StochLower)
+      // (turtle_S1_1==OP_BUY && turtle_S1_2==OP_SELL && S1==true)
       //|| (turtle_S2_1==OP_BUY && turtle_S2_2==OP_SELL && S2==true)
       //&& Last_Order_Profit()==false
       )
          {
-         SL_dist = ATR_SL_factor*ATR_med_0;
+         SL_dist = ATR_SL_factor * ATR_med_0;
          SL = Ask - SL_dist;
 
-         //TP = RR * SL_dist + Ask;
-         TP = 0;
+         TP = RR * SL_dist + Ask;
+         // TP = 0;
          trade_lots = GetLots(SL);
+        
          
-         if(IsLastOrderWin==false)
-            {
+         // if(IsLastOrderWin==false)
+            // {
             //if previous trade was a loss, continue. If previous trade was a win, skip trade
             
-            if(pyramidying == false)
-               {
+            // if(pyramidying == false)
+               // {
                ticket=OrderSend(Symbol(),OP_BUY,trade_lots,Ask,vSlippage,SL,TP,"Blackrain Trend Turtle",magic_number,0,Green);
                         
                if(ticket>0)
@@ -290,47 +290,47 @@ void OnTick()
                   {
                   Print("Error opening BUY order : ",GetLastError());
                   }
-               fake_order=false;   
-               }
-            }   
-         else
-            {
-            //IsLastOrderWin=false;
-            ticket=OrderSend(Symbol(),OP_BUY,0.01,Ask,vSlippage,SL,TP,"Blackrain Trend Turtle",magic_number,0,Green);
-            fake_order=true;
-            }      
+               // fake_order=false;   
+               // }
+            // }   
+         // else
+         //    {
+         //    //IsLastOrderWin=false;
+         //    ticket=OrderSend(Symbol(),OP_BUY,0.01,Ask,vSlippage,SL,TP,"Blackrain Trend Turtle",magic_number,0,Green);
+         //    fake_order=true;
+         //    }      
          
-         if(pyramidying == true)
-            {
-            ticket_1=OrderSend(Symbol(),OP_BUY,trade_lots,Ask,vSlippage,SL,Ask+(6*SL_dist),"Blackrain Trend Turtle",magic_number,0,Green);
-            ticket_2=OrderSend(Symbol(),OP_BUYSTOP,trade_lots,NormalizeDouble(Ask+(2*SL_dist),5),vSlippage,Ask+(1*SL_dist),Ask+(6*SL_dist),"Blackrain Trend Turtle",magic_number,0,Green);
-            ticket_3=OrderSend(Symbol(),OP_BUYSTOP,trade_lots,NormalizeDouble(Ask+(4*SL_dist),5),vSlippage,Ask+(3*SL_dist),Ask+(6*SL_dist),"Blackrain Trend Turtle",magic_number,0,Green);
-            }
+         // if(pyramidying == true)
+         //    {
+         //    ticket_1=OrderSend(Symbol(),OP_BUY,trade_lots,Ask,vSlippage,SL,Ask+(6*SL_dist),"Blackrain Trend Turtle",magic_number,0,Green);
+         //    ticket_2=OrderSend(Symbol(),OP_BUYSTOP,trade_lots,NormalizeDouble(Ask+(2*SL_dist),5),vSlippage,Ask+(1*SL_dist),Ask+(6*SL_dist),"Blackrain Trend Turtle",magic_number,0,Green);
+         //    ticket_3=OrderSend(Symbol(),OP_BUYSTOP,trade_lots,NormalizeDouble(Ask+(4*SL_dist),5),vSlippage,Ask+(3*SL_dist),Ask+(6*SL_dist),"Blackrain Trend Turtle",magic_number,0,Green);
+         //    }
                
          }
       
       //--- check for SELL position
             
       if(
-      //(turtle_S1_0==OP_SELL && stochastic_main_med_1<stochastic_signal_med_1 && stochastic_main_med_2>stochastic_signal_med_2 && stochastic_main_med_0>StochUpper)
-      (turtle_S1_1==OP_SELL && turtle_S1_2==OP_BUY && S1==true)
+      (turtle_S1_1==OP_SELL && stochastic_main_med_1<stochastic_signal_med_1 && stochastic_main_med_2>stochastic_signal_med_2 && stochastic_main_med_1>StochUpper)
+      // (turtle_S1_1==OP_SELL && turtle_S1_2==OP_BUY && S1==true)
       //|| (turtle_S2_1==OP_SELL && turtle_S2_2==OP_BUY && S2==true) 
       //&& Last_Order_Profit()==false
       )
          {
-         SL_dist = ATR_SL_factor*ATR_med_0;
+         SL_dist = ATR_SL_factor * ATR_med_0;
          SL = Bid + SL_dist;
 
-         //TP = Bid - RR * SL_dist;
-         TP = 0;
+         TP = Bid - RR * SL_dist;
+         // TP = 0;
          trade_lots = GetLots(SL);
             
-         if(IsLastOrderWin==false)
-            {
-            //if previous trade was a loss, continue. If previous trade was a win, skip trade
+         // if(IsLastOrderWin==false)
+         //    {
+         //    //if previous trade was a loss, continue. If previous trade was a win, skip trade
             
-            if(pyramidying == false)
-               {
+         //    if(pyramidying == false)
+         //       {
                ticket=OrderSend(Symbol(),OP_SELL,trade_lots,Bid,vSlippage,SL,TP,"Blackrain Trend Turtle",magic_number,0,Red);
                         
                if(ticket>0)
@@ -344,22 +344,22 @@ void OnTick()
                   {
                   Print("Error opening SELL order : ",GetLastError());
                   }
-               fake_order=false;   
-               }
-            }
-         else
-            {
-            //IsLastOrderWin=false;
-            ticket=OrderSend(Symbol(),OP_SELL,0.01,Bid,vSlippage,SL,TP,"Blackrain Trend Turtle",magic_number,0,Red);
-            fake_order=true;
-            }      
+               // fake_order=false;   
+               // }
+            // }
+         // else
+         //    {
+         //    //IsLastOrderWin=false;
+         //    ticket=OrderSend(Symbol(),OP_SELL,0.01,Bid,vSlippage,SL,TP,"Blackrain Trend Turtle",magic_number,0,Red);
+         //    fake_order=true;
+         //    }      
          
-         if(pyramidying == true)
-            {
-            ticket_1=OrderSend(Symbol(),OP_SELL,trade_lots,Bid,vSlippage,SL,Bid-(6*SL_dist),"Blackrain Trend Turtle",magic_number,0,Green);
-            ticket_2=OrderSend(Symbol(),OP_SELLSTOP,trade_lots,NormalizeDouble(Bid-(2*SL_dist),5),vSlippage,Bid-(1*SL_dist),Bid-(6*SL_dist),"Blackrain Trend Turtle",magic_number,0,Green);
-            ticket_3=OrderSend(Symbol(),OP_SELLSTOP,trade_lots,NormalizeDouble(Bid-(4*SL_dist),5),vSlippage,Bid-(3*SL_dist),Bid-(6*SL_dist),"Blackrain Trend Turtle",magic_number,0,Green);
-            }
+         // if(pyramidying == true)
+         //    {
+         //    ticket_1=OrderSend(Symbol(),OP_SELL,trade_lots,Bid,vSlippage,SL,Bid-(6*SL_dist),"Blackrain Trend Turtle",magic_number,0,Green);
+         //    ticket_2=OrderSend(Symbol(),OP_SELLSTOP,trade_lots,NormalizeDouble(Bid-(2*SL_dist),5),vSlippage,Bid-(1*SL_dist),Bid-(6*SL_dist),"Blackrain Trend Turtle",magic_number,0,Green);
+         //    ticket_3=OrderSend(Symbol(),OP_SELLSTOP,trade_lots,NormalizeDouble(Bid-(4*SL_dist),5),vSlippage,Bid-(3*SL_dist),Bid-(6*SL_dist),"Blackrain Trend Turtle",magic_number,0,Green);
+         //    }
                
          }
 
